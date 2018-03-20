@@ -1,0 +1,9 @@
+name = SOAP SERVER
+description = Custom soap server
+package = Custom modules
+core = 7.x
+version = 7.x-1.0
+
+files[] = soap_service_ehlis.php
+files[] = WSDLCreator/WSDLCreator.php
+files[] = lib-SAP/nusoap.php

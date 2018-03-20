@@ -1,0 +1,74 @@
+<?php
+
+//Desactivamos la cache para los ficheros wsdl
+ini_set("soap.wsdl_cache_enabled", "0");
+
+
+// SOAP ENDPOINT
+function soap_service_menu(){
+  $items['water_service'] = array(
+    'page callback' => 'webService',
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function webService(){
+
+  global $base_url;
+
+    $namespace = $base_url.'/water_service';
+    $server = new soap_server();
+    $server->configureWSDL("soap_service", $namespace, $namespace);//,false,'document');
+    $server->wsdl->schemaTargetNamespace = $namespace;
+    $server->wsdl->schemas[$namespace][0]->imports['http://schemas.xmlsoap.org/soap/encoding/'][0] = array('location' => '','schemaLocation' => 'http://schemas.xmlsoap.org/soap/encoding/', 'loaded' => true);
+    $server->wsdl->schemas[$namespace][0]->imports['http://schemas.xmlsoap.org/wsdl/'][0] = array('location' => '', 'schemaLocation' => 'http://schemas.xmlsoap.org/wsdl/', 'loaded' => true);
+
+    $server->register("soap_service.AddData",
+      array(//Input
+        "negocio" => "xsd:integer"
+        //"instalacion" => "xsd:integer",
+        //"datos" => "xsd:string",
+      ),
+      array(//Return
+        "return" => "xsd:integer"
+      ),
+      $namespace,
+      $namespace . '#test',
+      FALSE,
+      "literal",
+      "asd",
+      "http://schemas.xmlsoap.org/soap/encoding/"
+    );
+
+    $server->service(file_get_contents("php://input"));
+
+}
+
+/*
+ * LOG ERROR
+ * Registra un error de integracion
+ */
+
+function soap_error_log($tipo = 'info',$mensaje = '') {
+    $entity = entity_create('error_log', array('type' => 'soap_log'));
+    $wrapper = entity_metadata_wrapper('error_log', $entity);
+    $wrapper->title = $tipo;
+    $wrapper->field_eck_sl_message->set($mensaje);
+    $wrapper->save();
+}
+
+function soap_service_permission() {
+  return array(
+    'soap access' => array(
+      'title' => t('Access to custom seo module'),
+    )
+  );
+}
+
+
+
+
+
+
+/**/
