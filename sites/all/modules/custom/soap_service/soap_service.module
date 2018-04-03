@@ -17,31 +17,45 @@ function webService(){
 
   global $base_url;
 
-    $namespace = $base_url.'/water_service';
-    $server = new soap_server();
-    $server->configureWSDL("soap_service", $namespace, $namespace);//,false,'document');
-    $server->wsdl->schemaTargetNamespace = $namespace;
-    $server->wsdl->schemas[$namespace][0]->imports['http://schemas.xmlsoap.org/soap/encoding/'][0] = array('location' => '','schemaLocation' => 'http://schemas.xmlsoap.org/soap/encoding/', 'loaded' => true);
-    $server->wsdl->schemas[$namespace][0]->imports['http://schemas.xmlsoap.org/wsdl/'][0] = array('location' => '', 'schemaLocation' => 'http://schemas.xmlsoap.org/wsdl/', 'loaded' => true);
+  $namespace = $base_url.'/water_service';
+  $server = new soap_server();
+  $server->soap_defencoding = 'utf-8';
+  $server->decode_utf8 = false;
+  $server->configureWSDL("soap_service", $namespace, $namespace);//,false,'document');
+  $server->wsdl->schemaTargetNamespace = $namespace;
+  $server->wsdl->schemas[$namespace][0]->imports['http://schemas.xmlsoap.org/soap/encoding/'][0] = array('location' => '','schemaLocation' => 'http://schemas.xmlsoap.org/soap/encoding/', 'loaded' => true);
+  $server->wsdl->schemas[$namespace][0]->imports['http://schemas.xmlsoap.org/wsdl/'][0] = array('location' => '', 'schemaLocation' => 'http://schemas.xmlsoap.org/wsdl/', 'loaded' => true);
 
-    $server->register("soap_service.AddData",
-      array(//Input
-        "negocio" => "xsd:integer"
-        //"instalacion" => "xsd:integer",
-        //"datos" => "xsd:string",
-      ),
-      array(//Return
-        "return" => "xsd:integer"
-      ),
-      $namespace,
-      $namespace . '#test',
-      FALSE,
-      "literal",
-      "asd",
-      "http://schemas.xmlsoap.org/soap/encoding/"
-    );
+  $server->wsdl->addComplexType(
+    'arrDatos',
+    'complexType',
+    'struct',
+    'all',
+    '',
+    array(
+      'field_eck_dato1' => array('name' => 'field_eck_dato1', 'type' => 'xsd:string'),
+      'field_eck_dato2' => array('name' => 'field_eck_dato2', 'type' => 'xsd:string'),
+    )
+    //https://stackoverflow.com/questions/26502512/passing-an-array-to-web-service-php-nusoap
+  );
 
-    $server->service(file_get_contents("php://input"));
+  $server->register("soap_service.AddData",
+    array(//Input
+      "instalacion" => "xsd:integer",
+      "datos" => "tns:arrDatos",
+    ),
+    array(//Return
+      "return" => "xsd:integer"
+    ),
+    $namespace,
+    $namespace . '#AddData',
+    FALSE,
+    "literal",
+    "test method",
+    "http://schemas.xmlsoap.org/soap/encoding/"
+  );
+
+  $server->service(file_get_contents("php://input"));
 
 }
 
@@ -49,7 +63,6 @@ function webService(){
  * LOG ERROR
  * Registra un error de integracion
  */
-
 function soap_error_log($tipo = 'info',$mensaje = '') {
     $entity = entity_create('error_log', array('type' => 'soap_log'));
     $wrapper = entity_metadata_wrapper('error_log', $entity);

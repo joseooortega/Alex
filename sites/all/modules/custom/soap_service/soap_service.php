@@ -19,72 +19,57 @@ class soap_service {
 	private function write_log($message, $type = 'info'){
 		soap_error_log($type, $message);
 	}
+	private function numberValidation($n){
+		$n = strip_tags(trim($n));
 
+		if (!is_int($n * 1))
+			throw new SoapFault('400', "Wrong data type");
 
-	/**
-		* Authenticates the SOAP request. (This one is the key to the authentication, it will be called upon the server request)
-		*
-		* @param integer $username
-		* @param integer $password
-		* @return array
-	**/
-	public function authenticate($username, $password){
-
-		$username = strip_tags($username);
-		$password = strip_tags($password);
-
-		if ($uid = user_authenticate($username, $password)) {
-
-			$user_load = user_load($uid, TRUE);
-
-			//Comprueba si el usuario está bloqueado
-			if ($user_load->status == 0)
-				throw new SoapFault('401', "This user is blocked!");
-
-			if (!in_array('soap access', $user_load->roles))
-				throw new SoapFault('401', "This user has no permission to access to this webservice");
-
-			global $user;
-			$user = $user_load;
-
-			return $this->auth = true;
-		} else {
-			$this->write_log('Fallo de autenticación soap. user: '.$username.', pass: '.$password, 'Login error');
-			throw new SoapFault('401', "Incorrect username and / or password");
-		}
+		return $n;
 	}
 
 	/**
 	  * Modifica el estado y la URL de tracking de un pedido
 	  *
-		* @param integer $negocio
 		* @param integer $instalacion
-		* @param string $datos
+		* @param array $datos
 	  * @return integer
 	**/
-	public function AddData($negocio){ //, $instalacion, $datos
+	public function AddData($instalacion, $datos){
 
-		/*try {
-			//$this->doAuthenticate();
-			//$t = db_transaction();
-
-
+		try {
+			$this->doAuthenticate();
+			$t = db_transaction();
 
 
-			//$this->write_log('Dato añadido correctamente - order number: '.$order_number.' - Estado: '.$order_state.' - tracking: '.$url_tracking, 'OK');
+			// Validaciones
+			$instalacion = node_load($this->numberValidation($instalacion), NULL, TRUE);
+			if ($instalacion == FALSE)
+				throw new SoapFault('400', "There is no content with this ID");
+
+
+			// Creamos la entidad Datos
+			$entity = entity_create('datos_instalaciones', array('type' => 'datos'));
+	    $wrapper = entity_metadata_wrapper('datos_instalaciones', $entity);
+
+			foreach ($datos as $key => $dato) {
+				$wrapper->{$key}->set($dato);
+			}
+	    $wrapper->save();
+
+			$instalacion->field_ct_i_datos['und'][]['target_id'] = $wrapper->getIdentifier();
 
 			return 200;
 
 		} catch (SoapFault $e) {
-			//!empty($t) ? $t->rollBack() : '' ;
-			//$this->write_log('Error al intentar modificar un pedido - '.$e->getMessage(), __FUNCTION__.' error');
+			!empty($t) ? $t->rollBack() : '' ;
+			$this->write_log('Error al intentar añadir datos - '.$e->getMessage(), __FUNCTION__.' error');
 			return $this->SoapFaultMessage(__FUNCTION__, $e);
 		} catch (Exception $e){
-			//!empty($t) ? $t->rollBack() : '';
+			!empty($t) ? $t->rollBack() : '';
+			$this->write_log('Error al intentar añadir datos - '.$e->getMessage(), __FUNCTION__.' error');
 			return $this->SoapFaultMessage(__FUNCTION__, $e);
-		}*/
-
-		return 111;
+		}
 	}
 
 	private function doAuthenticate(){
@@ -117,4 +102,5 @@ class soap_service {
 			return false;
 		}
 	}
+
 }
